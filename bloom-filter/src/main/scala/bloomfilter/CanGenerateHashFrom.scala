@@ -31,10 +31,14 @@ object CanGenerateHashFrom {
 
   case object CanGenerateHashFromStringByteArray extends CanGenerateHashFrom[String] {
     private val valueOffset = unsafe.objectFieldOffset(stringValueField)
+    private val stringCoderField: Field = classOf[String].getDeclaredField("coder")
+    private val coderOffset = unsafe.objectFieldOffset(stringCoderField)
 
     override def generateHash(from: String): Long = {
       val value = unsafe.getObject(from, valueOffset).asInstanceOf[Array[Byte]]
-      MurmurHash3Generic.murmurhash3_x64_64(value, 0, from.length, 0)
+      val utf16 = unsafe.getByte(from, coderOffset) == 1
+      val length = if (utf16) from.length * 2 else from.length
+      MurmurHash3Generic.murmurhash3_x64_64(value, 0, length, 0)
     }
   }
 
